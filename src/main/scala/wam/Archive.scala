@@ -1,9 +1,10 @@
 package wam
 
-import java.io.{BufferedOutputStream, FileOutputStream, BufferedInputStream, File}
+import java.io.BufferedInputStream
 import java.util.zip.ZipFile
 import scala.collection.JavaConversions._
 import resource._
+import java.nio.file.{Files, Path}
 
 trait Archive {
   def modules: Set[Module]
@@ -11,33 +12,31 @@ trait Archive {
   /**
    * Extract the contained files to the specified directory.
    */
-  def extract(target: File)
+  def extract(target: Path)
 
   def exists: Boolean
 }
 
-case class ZipArchive(file: File) extends Archive {
+case class ZipArchive(path: Path) extends Archive {
   override def modules: Set[Module] = (for {
-    zipFile <- managed(new ZipFile(file)).map(Seq(_)).toTraversable
+    zipFile <- managed(new ZipFile(path.toFile)).map(Seq(_)).toTraversable
     entry <- zipFile.entries.toSeq
     modName = entry.getName.takeWhile(_ != '/')
   } yield Module(modName)).toSet
 
-  override def extract(target: File) {
+  override def extract(target: Path) {
     for {
-      zipFile <- managed(new ZipFile(file))
+      zipFile <- managed(new ZipFile(path.toFile))
       entry <- zipFile.entries().toSeq
       inStream <- managed(zipFile.getInputStream(entry))
       bufInStream <- managed(new BufferedInputStream(inStream))
 
-      targetFile = target / entry.getName
-      _ = targetFile.mkparents()
-      outStream <- managed(new FileOutputStream(targetFile))
-      bufOutStream <- managed(new BufferedOutputStream(outStream))
+      fileTarget = target / entry.getName
     } {
-      bufInStream.copyTo(bufOutStream)
+      Files.createDirectories(fileTarget.getParent)
+      Files.copy(bufInStream, fileTarget)
     }
   }
 
-  override def exists: Boolean = file.exists
+  override def exists: Boolean = Files.exists(path)
 }

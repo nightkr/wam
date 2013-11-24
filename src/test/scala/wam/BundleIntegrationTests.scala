@@ -2,53 +2,52 @@ package wam
 
 import org.scalatest.{BeforeAndAfterAll, Outcome, fixture}
 import wam.Bundle.BundleArchive
-import java.io.{BufferedOutputStream, BufferedInputStream, FileOutputStream, File}
+import java.io.BufferedInputStream
 import resource._
+import java.nio.file.{StandardCopyOption, Path, Files}
 
 class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
   type FixtureParam = WamCtx
 
   override protected def withFixture(test: OneArgTest): Outcome = {
-    val tempDir = file("test_wamdir")
+    val tempDir = path("test_wamdir")
     val ctx = WamCtx(tempDir / "wow", tempDir / "repo")
 
     try {
-      tempDir.mkdirs()
-      ctx.enabledAddOnsDir.mkdirs()
-      ctx.repository.mkdirs()
+      Files.createDirectories(tempDir)
+      Files.createDirectories(ctx.enabledAddOnsDir)
+      Files.createDirectories(ctx.repository)
       withFixture(test.toNoArgTest(ctx))
     } finally {
-      tempDir.deleteTree()
+      WamFiles.deleteTree(tempDir)
     }
   }
 
   implicit class BundleTestTools(val bundle: Bundle) {
     def fakeInstall()(implicit ctx: WamCtx) {
-      bundle.registryPath.mkdirs()
-      Module("module_a").registryPath(bundle).mkdirs()
-      Module("module_b").registryPath(bundle).mkdirs()
+      Files.createDirectories(bundle.registryPath)
+      Files.createDirectories(Module("module_a").registryPath(bundle))
+      Files.createDirectories(Module("module_b").registryPath(bundle))
     }
   }
 
   override protected def beforeAll() {
-    archiveFile = File.createTempFile("wam", null)
+    archiveFile = Files.createTempFile("wam", null)
 
     for {
       src <- managed(this.getClass.getClassLoader.getResourceAsStream("TellMeWhen-6.2.6.zip"))
       bufSrc <- managed(new BufferedInputStream(src))
-      target <- managed(new FileOutputStream(archiveFile))
-      bufTarget <- managed(new BufferedOutputStream(target))
     } {
-      bufSrc.copyTo(bufTarget)
+      Files.copy(bufSrc, archiveFile, StandardCopyOption.REPLACE_EXISTING)
     }
   }
 
   override protected def afterAll() {
-    archiveFile.delete()
+    Files.delete(archiveFile)
     archiveFile = null
   }
 
-  var archiveFile: File = null
+  var archiveFile: Path = null
 
   describe("A BundleRef") {
     val bundle = Bundle("MyBundle", Version("1.0"))
@@ -131,7 +130,7 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
               bundle.registryPath / "TellMeWhen" / "LDB.lua",
               bundle.registryPath / "TellMeWhen_Options" / "TellMeWhen_Options.toc"
             )
-            assert(checkFiles.forall(_.exists), "not all files were extracted properly")
+            assert(checkFiles.forall(Files.exists(_)), "not all files were extracted properly")
         }
         it("should be uninstallable") {
           implicit ctx =>
@@ -151,7 +150,7 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
 
     describe("for a useless archive file") {
       def bundle: Bundle = BundleArchive("MyAddOn", Version("1.0.0"), new Archive {
-        def extract(target: File) {
+        def extract(target: Path) {
           throw new NotImplementedError
         }
 

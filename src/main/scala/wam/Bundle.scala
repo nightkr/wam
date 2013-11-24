@@ -1,6 +1,8 @@
 package wam
 
-import java.io.{IOException, File}
+import java.io.IOException
+import java.nio.file.{Files, Path}
+import scala.util.Try
 
 /**
  * A Bundle corresponds to a versioned and named add-on, containing one or more [[wam.Module m o d u l e s]].
@@ -13,17 +15,18 @@ trait Bundle {
   def modules(implicit ctx: WamCtx): Set[Module] = installedModules
 
   def installedModules(implicit ctx: WamCtx): Set[Module] = for {
-    files <- Option(registryPath.listFiles).toSet[Array[File]] // listFiles returns null if the directory doesn't exist
+    files <- Try(WamFiles.directoryChildren(registryPath)).toOption.toSet[Seq[Path]]
     subDir <- files.toSet
-    if subDir.isDirectory
-    if !subDir.getName.startsWith(".")
-  } yield Module(subDir.getName)
+    if Files.isDirectory(subDir)
+    name = subDir.getFileName.toString
+    if !name.startsWith(".")
+  } yield Module(name)
 
   /** The path to the bundle in the repository, regardless of whether it is installed. */
-  def registryPath(implicit ctx: WamCtx): File = ctx.repository / name / version.str
+  def registryPath(implicit ctx: WamCtx): Path = ctx.repository / name / version.str
 
   /** Returns true if this Bundle is contained within the Wam repository (see [[wam.WamCtx]]). */
-  def installed(implicit ctx: WamCtx): Boolean = registryPath.exists
+  def installed(implicit ctx: WamCtx): Boolean = Files.exists(registryPath)
 
   /**
    * Returns true if this Bundle can be installed (there is something backing it).
@@ -51,7 +54,7 @@ trait Bundle {
   /** Uninstalls this Bundle from the repository. */
   def uninstall()(implicit ctx: WamCtx) {
     if (installed) {
-      registryPath.deleteTree()
+      WamFiles.deleteTree(registryPath)
     }
   }
 
@@ -108,7 +111,7 @@ object Bundle {
       if (!installed) {
         var success = false // Would use try/catch, but that messes up the stack traces when we rethrow them
         try {
-          registryPath.mkdirs()
+          Files.createDirectories(registryPath)
           src.extract(registryPath)
           success = true
         } finally {
@@ -143,21 +146,21 @@ case class Version(str: String) extends Comparable[Version] {
  */
 case class Module(name: String) {
   /** Returns the path to the module in the WoW Add-Ons folder. */
-  def enablePath(implicit ctx: WamCtx): File = ctx.enabledAddOnsDir / name
+  def enablePath(implicit ctx: WamCtx): Path = ctx.enabledAddOnsDir / name
 
   /** Returns the path to the module in the repository. */
-  def registryPath(bundle: Bundle)(implicit ctx: WamCtx): File = bundle.registryPath / name
+  def registryPath(bundle: Bundle)(implicit ctx: WamCtx): Path = bundle.registryPath / name
 
   /** Returns true if a module by this name is enabled. */
-  def enabled(implicit ctx: WamCtx): Boolean = enablePath.exists
+  def enabled(implicit ctx: WamCtx): Boolean = Files.exists(enablePath)
 
   /**
    * Returns true if a module by this name is enabled and managed by Wam.
    *
    * A module is considered managed by Wam if it is a symlink to a directory inside the Wam repository.
    */
-  def managed(implicit ctx: WamCtx): Boolean = enabled && ctx.repository.isAncestorOf(enablePath.getCanonicalFile)
+  def managed(implicit ctx: WamCtx): Boolean = enabled && ctx.repository.isAncestorOf(enablePath.toRealPath())
 
   /** Returns true if a module by this name is enabled and managed by the specified bundle. */
-  def managedBy(bundle: Bundle)(implicit ctx: WamCtx): Boolean = enabled && (enablePath.getCanonicalFile == registryPath(bundle))
+  def managedBy(bundle: Bundle)(implicit ctx: WamCtx): Boolean = enabled && (enablePath.toRealPath() == registryPath(bundle))
 }
