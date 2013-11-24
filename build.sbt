@@ -5,3 +5,8 @@ scalacOptions += "-feature"
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.0" % "test"
 
 libraryDependencies += "com.jsuereth" %% "scala-arm" % "1.3"
+
+ScctPlugin.instrumentSettings
+
+CoverallsPlugin.coverallsSettings
+
