@@ -1,6 +1,6 @@
 package wam
 
-import java.io.{OutputStream, InputStream, IOException}
+import java.io.IOException
 import java.nio.file.{Files, FileVisitResult, Path, SimpleFileVisitor}
 import java.nio.file.attribute.BasicFileAttributes
 import scala.util.Try
@@ -47,19 +47,4 @@ object WamFiles {
    * Alias for newDirectoryStream, but converted to a Scala collection
    */
   def directoryChildren(path: Path): Seq[Path] = Files.newDirectoryStream(path).toSeq
-}
-
-class InputStreamUtils(val is: InputStream) extends AnyVal {
-  /**
-   * Reads the whole input stream from the currently location, and writes everything read to os
-   * @param bufSize The buffer size in bytes
-   */
-  def copyTo(os: OutputStream, bufSize: Int = 1024) {
-    val buf = new Array[Byte](bufSize)
-    var read = 0
-    do {
-      os.write(buf, 0, read)
-      read = is.read(buf)
-    } while (read != -1)
-  }
 }
