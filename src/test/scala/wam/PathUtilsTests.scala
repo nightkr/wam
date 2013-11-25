@@ -19,30 +19,30 @@ class PathUtilsTests extends fixture.FunSpec {
     describe("/") {
       it("should work like resolve()") {
         _ =>
-          assert(path("one") / "two" == path("one").resolve("two"))
+          assert(path("one") / "two" === path("one").resolve("two"))
       }
 
       it("should handle slashes embedded within the path the same as if they were specified separately") {
         _ =>
-          assert(path("one") / "two/three" == path("one") / "two" / "three")
+          assert(path("one") / "two/three" === path("one") / "two" / "three")
       }
     }
 
     describe("~/") {
       it("should behave like / for paths that don't exist") {
         base =>
-          assert(base ~/ "one" == base / "one")
-          assert(base ~/ "OnE" == base / "OnE")
+          assert(base ~/ "one" === base / "one")
+          assert(base ~/ "OnE" === base / "OnE")
       }
 
       it("should correct the casing for paths that do exist") {
         base =>
           Files.createDirectories(base / "OnE")
           Files.createDirectories(base / "two")
-          assert(base ~/ "one" == base / "OnE")
-          assert(base ~/ "OnE" == base / "OnE")
-          assert(base ~/ "TwO" == base / "two")
-          assert(base ~/ "two" == base / "two")
+          assert(base ~/ "one" === base / "OnE")
+          assert(base ~/ "OnE" === base / "OnE")
+          assert(base ~/ "TwO" === base / "two")
+          assert(base ~/ "two" === base / "two")
       }
     }
   }

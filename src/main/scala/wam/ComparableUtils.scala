@@ -1,14 +1,43 @@
 package wam
 
-/** Provides some sugar around [[java.lang.Comparable]]. */
-class ComparableUtils[A](val c: Comparable[A]) extends AnyVal {
-  def <(x: A) = (c compareTo x) < 0
+import org.scalautils.Constraint
+import org.scalautils.ConversionCheckedTripleEquals._
 
-  def >(x: A) = (c compareTo x) > 0
+trait Compare[A] {
+  def compare(left: A, right: A): Compare.Result
+}
 
-  def ===(x: A) = (c compareTo x) == 0
+object Compare {
 
-  def <=(x: A) = this === x || this < x
+  sealed trait Result
 
-  def >=(x: A) = this === x || this > x
+  case object LessThan extends Result
+
+  case object MoreThan extends Result
+
+  case object Equal extends Result
+
+}
+
+class ComparableCompare[A <: Comparable[A]] extends Compare[A] {
+  def compare(left: A, right: A): Compare.Result = left.compareTo(right) match {
+    case -1 => Compare.LessThan
+    case 1 => Compare.MoreThan
+    case 0 => Compare.Equal
+  }
+}
+
+/** Provides some sugar around [[wam.Compare]]. */
+class ComparableUtils[A: Compare](val x: A) {
+  def <(y: A) = implicitly[Compare[A]].compare(x, y) === Compare.LessThan
+
+  def >(y: A) = implicitly[Compare[A]].compare(x, y) === Compare.MoreThan
+
+  def <=(y: A) = implicitly[Compare[A]].compare(x, y) !== Compare.MoreThan
+
+  def >=(y: A) = implicitly[Compare[A]].compare(x, y) !== Compare.LessThan
+}
+
+class ComparableEquality[A: Compare, B <: A] extends Constraint[A, B] {
+  def areEqual(left: A, right: B): Boolean = implicitly[Compare[A]].compare(left, right) === Compare.Equal
 }

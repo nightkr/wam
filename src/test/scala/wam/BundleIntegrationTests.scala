@@ -75,7 +75,7 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
 
       it("should detect no modules") {
         implicit ctx =>
-          assert(bundle.modules == Set())
+          assert(bundle.modules === Set())
       }
     }
 
@@ -108,7 +108,7 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
         implicit ctx =>
           bundle.fakeInstall()
 
-          assert(bundle.modules == Set(Module("module_a"), Module("module_b")))
+          assert(bundle.modules === Set(Module("module_a"), Module("module_b")))
       }
     }
   }
@@ -143,7 +143,7 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
         }
         it("should detect the correct modules") {
           implicit ctx =>
-            assert(bundle.modules == Set(Module("TellMeWhen"), Module("TellMeWhen_Options")))
+            assert(bundle.modules === Set(Module("TellMeWhen"), Module("TellMeWhen_Options")))
         }
       }
     }

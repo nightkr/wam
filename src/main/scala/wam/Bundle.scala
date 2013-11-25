@@ -3,6 +3,7 @@ package wam
 import java.io.IOException
 import java.nio.file.{Files, Path}
 import scala.util.Try
+import org.scalautils.ConversionCheckedTripleEquals._
 
 /**
  * A Bundle corresponds to a versioned and named add-on, containing one or more [[wam.Module m o d u l e s]].
@@ -162,5 +163,5 @@ case class Module(name: String) {
   def managed(implicit ctx: WamCtx): Boolean = enabled && ctx.repository.isAncestorOf(enablePath.toRealPath())
 
   /** Returns true if a module by this name is enabled and managed by the specified bundle. */
-  def managedBy(bundle: Bundle)(implicit ctx: WamCtx): Boolean = enabled && (enablePath.toRealPath() == registryPath(bundle))
+  def managedBy(bundle: Bundle)(implicit ctx: WamCtx): Boolean = enabled && (enablePath.toRealPath() === registryPath(bundle))
 }
