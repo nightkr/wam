@@ -10,11 +10,10 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
   type FixtureParam = WamCtx
 
   override protected def withFixture(test: OneArgTest): Outcome = {
-    val tempDir = path("test_wamdir")
+    val tempDir = Files.createTempDirectory(null)
     val ctx = WamCtx(tempDir / "wow", tempDir / "repo")
 
     try {
-      Files.createDirectories(tempDir)
       Files.createDirectories(ctx.enabledAddOnsDir)
       Files.createDirectories(ctx.repository)
       withFixture(test.toNoArgTest(ctx))
