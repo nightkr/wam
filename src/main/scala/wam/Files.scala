@@ -1,6 +1,6 @@
 package wam
 
-import java.nio.file.{Files => NioFiles, _}
+import java.nio.file.{Files => NioFiles, FileVisitor, FileVisitOption, FileVisitResult, Path}
 import java.nio.file.attribute.BasicFileAttributes
 import java.io.IOException
 
@@ -17,12 +17,12 @@ trait Files {
                    options: Set[FileVisitOption],
                    maxDepth: Int): Path =
     NioFiles.walkFileTree(start, new FileVisitor[Path] {
-      def preVisitDirectory(p1: Path, p2: BasicFileAttributes): FileVisitResult = preDirectory(p1, p2)
+      def preVisitDirectory(path: Path, attrs: BasicFileAttributes): FileVisitResult = preDirectory(path, attrs)
 
-      def visitFile(p1: Path, p2: BasicFileAttributes): FileVisitResult = node(p1, p2)
+      def visitFile(path: Path, attrs: BasicFileAttributes): FileVisitResult = node(path, attrs)
 
-      def visitFileFailed(p1: Path, p2: IOException): FileVisitResult = ???
+      def visitFileFailed(path: Path, e: IOException): FileVisitResult = nodeFailed(path, e)
 
-      def postVisitDirectory(p1: Path, p2: IOException): FileVisitResult = ???
+      def postVisitDirectory(path: Path, e: IOException): FileVisitResult = postDirectory(path, Option(e))
     })
 }
