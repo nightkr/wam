@@ -1,7 +1,7 @@
 package wam
 
 import java.io.IOException
-import java.nio.file.{Files, Path}
+import java.nio.file.Path
 import scala.util.Try
 import org.scalautils.ConversionCheckedTripleEquals._
 
@@ -18,7 +18,7 @@ trait Bundle {
   def installedModules(implicit ctx: WamCtx): Set[Module] = for {
     files <- Try(WamFiles.directoryChildren(registryPath)).toOption.toSet[Seq[Path]]
     subDir <- files.toSet
-    if Files.isDirectory(subDir)
+    if ctx.files.isDirectory(subDir)
     name = subDir.getFileName.toString
     if !name.startsWith(".")
   } yield Module(name)
@@ -27,7 +27,7 @@ trait Bundle {
   def registryPath(implicit ctx: WamCtx): Path = ctx.repository / name / version.str
 
   /** Returns true if this Bundle is contained within the Wam repository (see [[wam.WamCtx]]). */
-  def installed(implicit ctx: WamCtx): Boolean = Files.exists(registryPath)
+  def installed(implicit ctx: WamCtx): Boolean = ctx.files.exists(registryPath)
 
   /**
    * Returns true if this Bundle can be installed (there is something backing it).
@@ -112,7 +112,7 @@ object Bundle {
       if (!installed) {
         var success = false // Would use try/catch, but that messes up the stack traces when we rethrow them
         try {
-          Files.createDirectories(registryPath)
+          ctx.files.createDirectories(registryPath)
           src.extract(registryPath)
           success = true
         } finally {
@@ -153,7 +153,7 @@ case class Module(name: String) {
   def registryPath(bundle: Bundle)(implicit ctx: WamCtx): Path = bundle.registryPath / name
 
   /** Returns true if a module by this name is enabled. */
-  def enabled(implicit ctx: WamCtx): Boolean = Files.exists(enablePath)
+  def enabled(implicit ctx: WamCtx): Boolean = ctx.files.exists(enablePath)
 
   /**
    * Returns true if a module by this name is enabled and managed by Wam.
