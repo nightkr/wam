@@ -4,18 +4,19 @@ import org.scalatest.{BeforeAndAfterAll, Outcome, fixture}
 import wam.Bundle.BundleArchive
 import java.io.BufferedInputStream
 import resource._
-import java.nio.file.{StandardCopyOption, Path, Files}
+import java.nio.file.{StandardCopyOption, Path}
 
 class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
   type FixtureParam = WamCtx
 
   override protected def withFixture(test: OneArgTest): Outcome = {
-    val tempDir = Files.createTempDirectory(null)
-    val ctx = WamCtx(tempDir / "wow", tempDir / "repo")
+    val files = new Files {}
+    val tempDir = files.createTempDirectory(null)
+    val ctx = WamCtx(tempDir / "wow", tempDir / "repo", files)
 
     try {
-      Files.createDirectories(ctx.enabledAddOnsDir)
-      Files.createDirectories(ctx.repository)
+      files.createDirectories(ctx.enabledAddOnsDir)
+      files.createDirectories(ctx.repository)
       withFixture(test.toNoArgTest(ctx))
     } finally {
       WamFiles.deleteTree(tempDir)
@@ -24,13 +25,14 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
 
   implicit class BundleTestTools(val bundle: Bundle) {
     def fakeInstall()(implicit ctx: WamCtx) {
-      Files.createDirectories(bundle.registryPath)
-      Files.createDirectories(Module("module_a").registryPath(bundle))
-      Files.createDirectories(Module("module_b").registryPath(bundle))
+      ctx.files.createDirectories(bundle.registryPath)
+      ctx.files.createDirectories(Module("module_a").registryPath(bundle))
+      ctx.files.createDirectories(Module("module_b").registryPath(bundle))
     }
   }
 
   override protected def beforeAll() {
+    import java.nio.file.Files
     archiveFile = Files.createTempFile("wam", null)
 
     for {
@@ -42,6 +44,7 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
   }
 
   override protected def afterAll() {
+    import java.nio.file.Files
     Files.delete(archiveFile)
     archiveFile = null
   }
@@ -149,13 +152,13 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
 
     describe("for a useless archive file") {
       def bundle: Bundle = BundleArchive("MyAddOn", Version("1.0.0"), new Archive {
-        def extract(target: Path) {
+        def extract(target: Path)(implicit ctx: WamCtx) {
           throw new NotImplementedError
         }
 
-        def modules = throw new NotImplementedError
+        def modules(implicit ctx: WamCtx) = throw new NotImplementedError
 
-        def exists = true
+        def exists(implicit ctx: WamCtx) = true
       })
 
       it("should clean up the failed installation") {

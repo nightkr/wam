@@ -1,9 +1,10 @@
 package wam
 
-import java.nio.file.{Files => NioFiles, FileVisitor, FileVisitOption, FileVisitResult, Path}
+import java.nio.file.{Files => NioFiles, _}
 import java.nio.file.attribute.BasicFileAttributes
-import java.io.IOException
+import java.io.{OutputStream, InputStream, IOException}
 import scala.collection.JavaConversions._
+import scala.Some
 
 
 /**
@@ -29,4 +30,26 @@ trait Files {
 
       def postVisitDirectory(path: Path, e: IOException): FileVisitResult = postDirectory(path, Option(e))
     })
+
+  def exists(path: Path): Boolean = NioFiles.exists(path)
+
+  def createDirectories(path: Path) {
+    NioFiles.createDirectories(path)
+  }
+
+  def createDirectory(path: Path) {
+    NioFiles.createDirectory(path)
+  }
+
+  def copy(in: Path, out: Path, options: CopyOption*) {
+    NioFiles.copy(in, out, options: _*)
+  }
+
+  def copy(in: InputStream, out: Path, options: CopyOption*) {
+    NioFiles.copy(in, out, options: _*)
+  }
+
+  def copy(in: Path, out: OutputStream) {
+    NioFiles.copy(in, out)
+  }
 }

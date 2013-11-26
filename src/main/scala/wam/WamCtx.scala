@@ -7,6 +7,6 @@ import java.nio.file.Path
  * @param wowDir Installation directory of World of Warcraft.
  * @param repository Directory which contains installed bundles.
  */
-case class WamCtx(wowDir: Path, repository: Path) {
+case class WamCtx(wowDir: Path, repository: Path, files: Files) {
   def enabledAddOnsDir = wowDir ~/ "interface" ~/ "addons"
 }

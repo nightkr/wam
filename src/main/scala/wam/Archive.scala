@@ -4,27 +4,27 @@ import java.io.BufferedInputStream
 import java.util.zip.ZipFile
 import scala.collection.JavaConversions._
 import resource._
-import java.nio.file.{Files, Path}
+import java.nio.file.Path
 
 trait Archive {
-  def modules: Set[Module]
+  def modules(implicit ctx: WamCtx): Set[Module]
 
   /**
    * Extract the contained files to the specified directory.
    */
-  def extract(target: Path)
+  def extract(target: Path)(implicit ctx: WamCtx)
 
-  def exists: Boolean
+  def exists(implicit ctx: WamCtx): Boolean
 }
 
 case class ZipArchive(path: Path) extends Archive {
-  override def modules: Set[Module] = (for {
+  override def modules(implicit ctx: WamCtx): Set[Module] = (for {
     zipFile <- managed(new ZipFile(path.toFile)).map(Seq(_)).toTraversable
     entry <- zipFile.entries.toSeq
     modName = entry.getName.takeWhile(_ != '/')
   } yield Module(modName)).toSet
 
-  override def extract(target: Path) {
+  override def extract(target: Path)(implicit ctx: WamCtx) {
     for {
       zipFile <- managed(new ZipFile(path.toFile))
       entry <- zipFile.entries().toSeq
@@ -33,10 +33,10 @@ case class ZipArchive(path: Path) extends Archive {
 
       fileTarget = target / entry.getName
     } {
-      Files.createDirectories(fileTarget.getParent)
-      Files.copy(bufInStream, fileTarget)
+      ctx.files.createDirectories(fileTarget.getParent)
+      ctx.files.copy(bufInStream, fileTarget)
     }
   }
 
-  override def exists: Boolean = Files.exists(path)
+  override def exists(implicit ctx: WamCtx): Boolean = ctx.files.exists(path)
 }
