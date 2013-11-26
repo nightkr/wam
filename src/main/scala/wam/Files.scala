@@ -31,7 +31,11 @@ trait Files {
       def postVisitDirectory(path: Path, e: IOException): FileVisitResult = postDirectory(path, Option(e))
     })
 
-  def exists(path: Path): Boolean = NioFiles.exists(path)
+  def exists(path: Path, options: LinkOption*): Boolean = NioFiles.exists(path, options: _*)
+
+  def isDirectory(path: Path, options: LinkOption*): Boolean = NioFiles.isDirectory(path, options: _*)
+
+  def isFile(path: Path, options: LinkOption*): Boolean = NioFiles.isRegularFile(path, options: _*)
 
   def createDirectories(path: Path) {
     NioFiles.createDirectories(path)
