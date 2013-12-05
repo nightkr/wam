@@ -65,8 +65,8 @@ trait Bundle {
    * @throws Bundle.EmptyBundle If this Bundle contains no modules.
    */
   def enable(force: Boolean = false)(implicit ctx: WamCtx) = {
-    ???
-  } // modules.foreach(_.enable())
+    modules.foreach(_.enable(this, force))
+  }
 
   /**
    * Disables all Modules in this Bundle.
@@ -156,6 +156,10 @@ case class Module(name: String) {
 
   /** Returns true if a module by this name is enabled. */
   def enabled(implicit ctx: WamCtx): Boolean = ctx.files.exists(enablePath)
+
+  def enable(bundle: Bundle, force: Boolean = false)(implicit ctx: WamCtx) {
+    ???
+  }
 
   /**
    * Returns true if a module by this name is enabled and managed by Wam.
