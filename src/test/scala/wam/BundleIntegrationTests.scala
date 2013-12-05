@@ -24,10 +24,11 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
   }
 
   implicit class BundleTestTools(val bundle: Bundle) {
-    def fakeInstall()(implicit ctx: WamCtx) {
+    def fakeInstall(modules: Seq[String] = Seq("module_a", "module_b"))(implicit ctx: WamCtx) {
       ctx.files.createDirectories(bundle.registryPath)
-      ctx.files.createDirectories(Module("module_a").registryPath(bundle))
-      ctx.files.createDirectories(Module("module_b").registryPath(bundle))
+      for (m <- modules) {
+        ctx.files.createDirectories(Module(m).registryPath(bundle))
+      }
     }
   }
 
