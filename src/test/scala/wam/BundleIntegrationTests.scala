@@ -11,7 +11,7 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
 
   override protected def withFixture(test: OneArgTest): Outcome = {
     val files = new Files {}
-    val tempDir = files.createTempDirectory(null)
+    val tempDir = files.createTempDirectory()
     val ctx = WamCtx(tempDir / "wow", tempDir / "repo", files)
 
     try {
@@ -19,7 +19,7 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
       files.createDirectories(ctx.repository)
       withFixture(test.toNoArgTest(ctx))
     } finally {
-      WamFiles.deleteTree(tempDir)
+      ctx.files.deleteTree(tempDir)
     }
   }
 
@@ -132,7 +132,7 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
               bundle.registryPath / "TellMeWhen" / "LDB.lua",
               bundle.registryPath / "TellMeWhen_Options" / "TellMeWhen_Options.toc"
             )
-            assert(checkFiles.forall(Files.exists(_)), "not all files were extracted properly")
+            assert(checkFiles.forall(ctx.files.exists(_)), "not all files were extracted properly")
         }
         it("should be uninstallable") {
           implicit ctx =>

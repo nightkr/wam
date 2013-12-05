@@ -8,5 +8,5 @@ import java.nio.file.Path
  * @param repository Directory which contains installed bundles.
  */
 case class WamCtx(wowDir: Path, repository: Path, files: Files) {
-  def enabledAddOnsDir = wowDir ~/ "interface" ~/ "addons"
+  def enabledAddOnsDir = wowDir.~/("interface")(files).~/("addons")(files)
 }
