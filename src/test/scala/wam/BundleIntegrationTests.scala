@@ -83,35 +83,73 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
     }
 
     describe("when installed") {
-      it("should be installable") {
-        implicit ctx =>
-          bundle.fakeInstall()
+      def installedTests(modules: Seq[String]) {
+        it("should be installable") {
+          implicit ctx =>
+            bundle.fakeInstall(modules)
 
-          assert(bundle.installable, "the bundle does not consider itself installable")
-          bundle.install()
-          assert(bundle.installed, "the bundle does not consider itself installed")
+            assert(bundle.installable, "the bundle does not consider itself installable")
+            bundle.install()
+            assert(bundle.installed, "the bundle does not consider itself installed")
+        }
+
+        it("should be uninstallable") {
+          implicit ctx =>
+            bundle.fakeInstall(modules)
+
+            bundle.uninstall()
+            assert(!bundle.installed, "the bundle still considers itself installed")
+        }
+
+        it("should consider itself installed") {
+          implicit ctx =>
+            bundle.fakeInstall(modules)
+
+            assert(bundle.installed, "the bundle does not consider itself installed")
+        }
+
+        it("should detect the correct modules") {
+          implicit ctx =>
+            bundle.fakeInstall(modules)
+
+            assert(bundle.modules === modules.map(Module).toSet)
+        }
       }
 
-      it("should be uninstallable") {
-        implicit ctx =>
-          bundle.fakeInstall()
+      describe("and containing no modules") {
+        val modules = Seq()
 
-          bundle.uninstall()
-          assert(!bundle.installed, "the bundle still considers itself installed")
+        it("should not be enableable") {
+          implicit ctx =>
+            bundle.fakeInstall(modules)
+
+            assert(!bundle.enabled, "the bundle already considers itself enabled")
+            assert(!bundle.fullyEnabled, "the bundle already considers itself fully enabled")
+            intercept[Bundle.EmptyBundle] {
+              bundle.enable()
+            }
+            assert(!bundle.enabled, "the bundle considers itself enabled")
+            assert(!bundle.fullyEnabled, "the bundle considers itself fully enabled")
+        }
+
+        installedTests(modules)
       }
 
-      it("should consider itself installed") {
-        implicit ctx =>
-          bundle.fakeInstall()
+      describe("and containing two disabled modules named 'module_a' and 'module_b'") {
+        val modules = Seq("module_a", "module_b")
 
-          assert(bundle.installed, "the bundle does not consider itself installed")
-      }
+        it("should be enableable") {
+          implicit ctx =>
+            bundle.fakeInstall(modules)
 
-      it("should detect the correct modules") {
-        implicit ctx =>
-          bundle.fakeInstall(Seq("module_a", "module_b"))
+            assert(!bundle.enabled, "the bundle already considers itself enabled")
+            assert(!bundle.fullyEnabled, "the bundle already considers itself fully enabled")
+            bundle.enable()
+            assert(bundle.enabled, "the bundle doesn't consider itself enabled")
+            assert(bundle.fullyEnabled, "the bundle doesn't consider itself fully enabled")
+        }
 
-          assert(bundle.modules === Set(Module("module_a"), Module("module_b")))
+        installedTests(modules)
       }
     }
   }

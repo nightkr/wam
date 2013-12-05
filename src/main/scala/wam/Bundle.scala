@@ -62,6 +62,7 @@ trait Bundle {
    * Enables all Modules in this Bundle.
    * @param force Whether or not to overwrite modules which come from other bundles or are not managed by Wam
    * @throws Bundle.NotInstalled If this Bundle is not already installed.
+   * @throws Bundle.EmptyBundle If this Bundle contains no modules.
    */
   def enable(force: Boolean = false)(implicit ctx: WamCtx) = {
     ???
@@ -130,6 +131,8 @@ object Bundle {
   class NotInstallable(val bundle: Bundle) extends Exception(bundle.toString)
 
   class NotInstalled(val bundle: Bundle) extends Exception(bundle.toString)
+
+  class EmptyBundle(val bundle: Bundle) extends Exception(bundle.toString)
 
 }
 
