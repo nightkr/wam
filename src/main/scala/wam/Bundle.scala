@@ -2,7 +2,6 @@ package wam
 
 import java.io.IOException
 import java.nio.file.Path
-import scala.util.Try
 import org.scalautils.ConversionCheckedTripleEquals._
 
 /**
@@ -16,7 +15,7 @@ trait Bundle {
   def modules(implicit ctx: WamCtx): Set[Module] = installedModules
 
   def installedModules(implicit ctx: WamCtx): Set[Module] = for {
-    files <- Try(WamFiles.directoryChildren(registryPath)).toOption.toSet[Seq[Path]]
+    files <- ctx.files.directoryChildren(registryPath).toOption.toSet[Seq[Path]]
     subDir <- files.toSet
     if ctx.files.isDirectory(subDir)
     name = subDir.getFileName.toString
@@ -55,7 +54,7 @@ trait Bundle {
   /** Uninstalls this Bundle from the repository. */
   def uninstall()(implicit ctx: WamCtx) {
     if (installed) {
-      WamFiles.deleteTree(registryPath)
+      ctx.files.deleteTree(registryPath)
     }
   }
 

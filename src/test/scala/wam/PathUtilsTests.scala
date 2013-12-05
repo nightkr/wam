@@ -1,17 +1,18 @@
 package wam
 
 import org.scalatest.{Outcome, fixture}
-import java.nio.file.{NoSuchFileException, Path, Files}
+import java.nio.file.{NoSuchFileException, Path}
 
 class PathUtilsTests extends fixture.FunSpec {
-  type FixtureParam = Path
+  type FixtureParam = (Path, Files)
 
   override protected def withFixture(test: OneArgTest): Outcome = {
-    val path = Files.createTempDirectory(null)
+    val files = new Files {}
+    val path = files.createTempDirectory()
     try {
-      withFixture(test.toNoArgTest(path))
+      withFixture(test.toNoArgTest((path, files)))
     } finally {
-      WamFiles.deleteTree(path)
+      files.deleteTree(path)
     }
   }
 
@@ -30,15 +31,17 @@ class PathUtilsTests extends fixture.FunSpec {
 
     describe("~/") {
       it("should behave like / for paths that don't exist") {
-        base =>
+        case (base, files) =>
+          implicit val _files = files // ~/ takes a Files, but we can't mark stuff as implicit while pattern-matching over it
           assert(base ~/ "one" === base / "one")
           assert(base ~/ "OnE" === base / "OnE")
       }
 
       it("should correct the casing for paths that do exist") {
-        base =>
-          Files.createDirectories(base / "OnE")
-          Files.createDirectories(base / "two")
+        case (base, files) =>
+          implicit val _files = files
+          files.createDirectories(base / "OnE")
+          files.createDirectories(base / "two")
           assert(base ~/ "one" === base / "OnE")
           assert(base ~/ "OnE" === base / "OnE")
           assert(base ~/ "TwO" === base / "two")
@@ -47,38 +50,38 @@ class PathUtilsTests extends fixture.FunSpec {
     }
   }
 
-  describe("WamFiles") {
+  describe("Files") {
     describe("deleteTree") {
       it("should delete files") {
-        base =>
+        case (base, files) =>
           val path = base / "hi"
-          Files.createFile(path)
-          WamFiles.deleteTree(path)
-          assert(!Files.exists(path), "the file still exists")
+          files.createFile(path)
+          files.deleteTree(path)
+          assert(!files.exists(path), "the file still exists")
       }
 
       it("should delete empty directories") {
-        base =>
+        case (base, files) =>
           val path = base / "hi"
-          Files.createDirectory(path)
-          WamFiles.deleteTree(path)
-          assert(!Files.exists(path), "the directory still exists")
+          files.createDirectory(path)
+          files.deleteTree(path)
+          assert(!files.exists(path), "the directory still exists")
       }
 
       it("should delete trees") {
-        base =>
+        case (base, files) =>
           val path = base / "hi"
-          Files.createDirectories(path / "one" / "two" / "three")
-          Files.createFile(path / "one" / "two" / "three" / "four")
-          WamFiles.deleteTree(path)
-          assert(!Files.exists(path), "the directory still exists")
+          files.createDirectories(path / "one" / "two" / "three")
+          files.createFile(path / "one" / "two" / "three" / "four")
+          files.deleteTree(path)
+          assert(!files.exists(path), "the directory still exists")
       }
 
       it("should fail on paths that don't exist") {
-        base =>
+        case (base, files) =>
           val path = base / "hi"
           intercept[NoSuchFileException] {
-            WamFiles.deleteTree(path)
+            files.deleteTree(path)
           }
       }
     }

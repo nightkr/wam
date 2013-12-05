@@ -12,4 +12,6 @@ package object wam {
   implicit def compareEquality[A: Compare, B <: A]: Constraint[A, B] = new ComparableEquality[A, B]
 
   implicit def comparable2compare[A <: Comparable[A]]: Compare[A] = new ComparableCompare[A]
+
+  implicit def ctx2files(ctx: WamCtx): Files = ctx.files
 }
