@@ -63,6 +63,8 @@ trait Files {
     NioFiles.createSymbolicLink(from, to)
   }
 
+  def getSymlink(link: Path): Option[Path] = Try(NioFiles.readSymbolicLink(link)).toOption
+
   def copy(in: Path, out: Path, options: SlB = SlBFollow) {
     NioFiles.copy(in, out, options.toLinkOptions: _*)
   }
