@@ -84,6 +84,19 @@ class PathUtilsTests extends fixture.FunSpec {
             files.deleteTree(path)
           }
       }
+
+      it("should not traverse symlinks") {
+        case (base, files) =>
+          val node = "node"
+          val tree = base / "tree"
+          val link = base / "symlink"
+
+          files.createDirectories(tree / node)
+          files.createSymlink(link, tree)
+          assert(files.exists(link / node), "the subdirectory is not accessible through the symlink")
+          files.deleteTree(link)
+          assert(files.exists(tree / node), "the subdirectory no longer exists after deleting the symlink")
+      }
     }
   }
 }

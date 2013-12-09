@@ -12,6 +12,10 @@ import scala.util.Try
  * Provides wrappers for [[java.nio.file.Files]], and some other utility methods
  */
 trait Files {
+
+  import Files.{SymlinkBehavior => SlB}
+  import Files.SymlinkBehavior.{Follow => SlBFollow}
+
   def walkFileTree(start: Path,
                    node: (Path, BasicFileAttributes) => FileVisitResult = (_, _) => FileVisitResult.CONTINUE,
                    nodeFailed: (Path, IOException) => FileVisitResult = (_, e) => throw e,
@@ -32,11 +36,11 @@ trait Files {
       def postVisitDirectory(path: Path, e: IOException): FileVisitResult = postDirectory(path, Option(e))
     })
 
-  def exists(path: Path, options: LinkOption*): Boolean = NioFiles.exists(path, options: _*)
+  def exists(path: Path, options: SlB = SlBFollow): Boolean = NioFiles.exists(path, options.toLinkOptions: _*)
 
-  def isDirectory(path: Path, options: LinkOption*): Boolean = NioFiles.isDirectory(path, options: _*)
+  def isDirectory(path: Path, options: SlB = SlBFollow): Boolean = NioFiles.isDirectory(path, options.toLinkOptions: _*)
 
-  def isFile(path: Path, options: LinkOption*): Boolean = NioFiles.isRegularFile(path, options: _*)
+  def isFile(path: Path, options: SlB = SlBFollow): Boolean = NioFiles.isRegularFile(path, options.toLinkOptions: _*)
 
   def createDirectories(path: Path) {
     NioFiles.createDirectories(path)
@@ -52,18 +56,22 @@ trait Files {
 
   def createTempDirectory(dir: Option[Path] = None, prefix: Option[String] = None, attrs: Seq[FileAttribute[_]] = Seq()) = dir match {
     case None => NioFiles.createTempDirectory(prefix.getOrElse(null), attrs: _*)
-    case Some(dir) => NioFiles.createTempDirectory(dir, prefix.getOrElse(null), attrs: _*)
+    case Some(definiteDir) => NioFiles.createTempDirectory(definiteDir, prefix.getOrElse(null), attrs: _*)
   }
 
-  def copy(in: Path, out: Path, options: CopyOption*) {
-    NioFiles.copy(in, out, options: _*)
+  def createSymlink(from: Path, to: Path) {
+    NioFiles.createSymbolicLink(from, to)
   }
 
-  def copy(in: InputStream, out: Path, options: CopyOption*) {
-    NioFiles.copy(in, out, options: _*)
+  def copy(in: Path, out: Path, options: SlB = SlBFollow) {
+    NioFiles.copy(in, out, options.toLinkOptions: _*)
   }
 
-  def copy(in: Path, out: OutputStream) {
+  def write(in: InputStream, out: Path, options: SlB = SlBFollow) {
+    NioFiles.copy(in, out, options.toLinkOptions: _*)
+  }
+
+  def read(in: Path, out: OutputStream) {
     NioFiles.copy(in, out)
   }
 
@@ -95,4 +103,24 @@ trait Files {
       }
     )
   }
+}
+
+object Files {
+
+  sealed trait SymlinkBehavior {
+    def toLinkOptions: Seq[LinkOption]
+  }
+
+  object SymlinkBehavior {
+
+    case object Ignore extends SymlinkBehavior {
+      override def toLinkOptions = Seq(LinkOption.NOFOLLOW_LINKS)
+    }
+
+    case object Follow extends SymlinkBehavior {
+      override def toLinkOptions = Seq()
+    }
+
+  }
+
 }

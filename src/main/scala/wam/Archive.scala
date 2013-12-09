@@ -34,7 +34,7 @@ case class ZipArchive(path: Path) extends Archive {
       fileTarget = target / entry.getName
     } {
       ctx.files.createDirectories(fileTarget.getParent)
-      ctx.files.copy(bufInStream, fileTarget)
+      ctx.files.write(bufInStream, fileTarget)
     }
   }
 
