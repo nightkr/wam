@@ -64,9 +64,12 @@ trait Bundle {
    * @throws Bundle.NotInstalled If this Bundle is not already installed.
    * @throws Bundle.EmptyBundle If this Bundle contains no modules.
    */
-  def enable(force: Boolean = false)(implicit ctx: WamCtx) = {
-    modules.foreach(_.enable(this, force))
-  }
+  def enable(force: Boolean = false)(implicit ctx: WamCtx) =
+    if (modules.nonEmpty) {
+      modules.foreach(_.enable(this, force))
+    } else {
+      throw new Bundle.EmptyBundle(this)
+    }
 
   /**
    * Disables all Modules in this Bundle.
@@ -158,7 +161,11 @@ case class Module(name: String) {
   def enabled(implicit ctx: WamCtx): Boolean = ctx.files.exists(enablePath)
 
   def enable(bundle: Bundle, force: Boolean = false)(implicit ctx: WamCtx) {
-    ???
+    if (!enabled || managedBy(bundle)) {
+      ctx.files.createSymlink(enablePath, registryPath(bundle))
+    } else {
+      throw new Module.Conflict(this, bundle)
+    }
   }
 
   /**
@@ -170,4 +177,10 @@ case class Module(name: String) {
 
   /** Returns true if a module by this name is enabled and managed by the specified bundle. */
   def managedBy(bundle: Bundle)(implicit ctx: WamCtx): Boolean = enabled && (enablePath.toRealPath() === registryPath(bundle))
+}
+
+object Module {
+
+  class Conflict(val module: Module, bundle: Bundle) extends Exception(module.toString)
+
 }

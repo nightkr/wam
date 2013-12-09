@@ -4,7 +4,7 @@ import org.scalatest.{BeforeAndAfterAll, Outcome, fixture}
 import wam.Bundle.BundleArchive
 import java.io.BufferedInputStream
 import resource._
-import java.nio.file.{StandardCopyOption, Path}
+import java.nio.file.Path
 
 class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
   type FixtureParam = WamCtx
@@ -33,20 +33,20 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
   }
 
   override protected def beforeAll() {
-    import java.nio.file.Files
-    archiveFile = Files.createTempFile("wam", null)
+    val files = new Files {}
+    archiveFile = files.createTempFile()
 
     for {
       src <- managed(this.getClass.getClassLoader.getResourceAsStream("TellMeWhen-6.2.6.zip"))
       bufSrc <- managed(new BufferedInputStream(src))
     } {
-      Files.copy(bufSrc, archiveFile, StandardCopyOption.REPLACE_EXISTING)
+      files.write(bufSrc, archiveFile, Files.CopyOptions(replaceExisting = true))
     }
   }
 
   override protected def afterAll() {
-    import java.nio.file.Files
-    Files.delete(archiveFile)
+    val files = new Files {}
+    files.delete(archiveFile)
     archiveFile = null
   }
 
@@ -112,7 +112,7 @@ class BundleIntegrationTests extends fixture.FunSpec with BeforeAndAfterAll {
           implicit ctx =>
             bundle.fakeInstall(modules)
 
-            assert(bundle.modules === modules.map(Module).toSet)
+            assert(bundle.modules === modules.map(Module.apply).toSet)
         }
       }
 

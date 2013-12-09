@@ -14,4 +14,6 @@ package object wam {
   implicit def comparable2compare[A <: Comparable[A]]: Compare[A] = new ComparableCompare[A]
 
   implicit def ctx2files(ctx: WamCtx): Files = ctx.files
+
+  implicit def any2condutils[A](x: A): CondUtils[A] = new CondUtils[A](x)
 }

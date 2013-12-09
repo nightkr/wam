@@ -6,6 +6,7 @@ import java.io.{OutputStream, InputStream, IOException}
 import scala.collection.JavaConversions._
 import scala.Some
 import scala.util.Try
+import wam.Files.CopyOptions
 
 
 /**
@@ -13,8 +14,8 @@ import scala.util.Try
  */
 trait Files {
 
-  import Files.{SymlinkBehavior => SlB}
-  import Files.SymlinkBehavior.{Follow => SlBFollow}
+  import Files.SymlinkOptions
+  import Files.SymlinkOptions.{Follow => SlFollow}
 
   def walkFileTree(start: Path,
                    node: (Path, BasicFileAttributes) => FileVisitResult = (_, _) => FileVisitResult.CONTINUE,
@@ -36,11 +37,11 @@ trait Files {
       def postVisitDirectory(path: Path, e: IOException): FileVisitResult = postDirectory(path, Option(e))
     })
 
-  def exists(path: Path, options: SlB = SlBFollow): Boolean = NioFiles.exists(path, options.toLinkOptions: _*)
+  def exists(path: Path, options: SymlinkOptions = SlFollow): Boolean = NioFiles.exists(path, options.toOptions: _*)
 
-  def isDirectory(path: Path, options: SlB = SlBFollow): Boolean = NioFiles.isDirectory(path, options.toLinkOptions: _*)
+  def isDirectory(path: Path, options: SymlinkOptions = SlFollow): Boolean = NioFiles.isDirectory(path, options.toOptions: _*)
 
-  def isFile(path: Path, options: SlB = SlBFollow): Boolean = NioFiles.isRegularFile(path, options.toLinkOptions: _*)
+  def isFile(path: Path, options: SymlinkOptions = SlFollow): Boolean = NioFiles.isRegularFile(path, options.toOptions: _*)
 
   def createDirectories(path: Path) {
     NioFiles.createDirectories(path)
@@ -54,9 +55,14 @@ trait Files {
     NioFiles.createFile(path, attribs: _*)
   }
 
-  def createTempDirectory(dir: Option[Path] = None, prefix: Option[String] = None, attrs: Seq[FileAttribute[_]] = Seq()) = dir match {
+  def createTempDirectory(dir: Option[Path] = None, prefix: Option[String] = None, attrs: Seq[FileAttribute[_]] = Seq()): Path = dir match {
     case None => NioFiles.createTempDirectory(prefix.getOrElse(null), attrs: _*)
     case Some(definiteDir) => NioFiles.createTempDirectory(definiteDir, prefix.getOrElse(null), attrs: _*)
+  }
+
+  def createTempFile(dir: Option[Path] = None, prefix: Option[String] = None, suffix: Option[String] = None, attrs: Seq[FileAttribute[_]] = Seq()): Path = dir match {
+    case None => NioFiles.createTempFile(prefix.getOrElse(null), suffix.getOrElse(null), attrs: _*)
+    case Some(definiteDir) => NioFiles.createTempFile(definiteDir, prefix.getOrElse(null), suffix.getOrElse(null), attrs: _*)
   }
 
   def createSymlink(from: Path, to: Path) {
@@ -65,12 +71,12 @@ trait Files {
 
   def getSymlink(link: Path): Option[Path] = Try(NioFiles.readSymbolicLink(link)).toOption
 
-  def copy(in: Path, out: Path, options: SlB = SlBFollow) {
-    NioFiles.copy(in, out, options.toLinkOptions: _*)
+  def copy(in: Path, out: Path, options: CopyOptions = CopyOptions()) {
+    NioFiles.copy(in, out, options.toOptions: _*)
   }
 
-  def write(in: InputStream, out: Path, options: SlB = SlBFollow) {
-    NioFiles.copy(in, out, options.toLinkOptions: _*)
+  def write(in: InputStream, out: Path, options: CopyOptions = CopyOptions()) {
+    NioFiles.copy(in, out, options.toOptions: _*)
   }
 
   def read(in: Path, out: OutputStream) {
@@ -109,18 +115,89 @@ trait Files {
 
 object Files {
 
-  sealed trait SymlinkBehavior {
-    def toLinkOptions: Seq[LinkOption]
+  trait ToOptions[A] {
+    def toOptions: Seq[A]
   }
 
-  object SymlinkBehavior {
+  sealed trait SymlinkOption[A >: LinkOption] extends ToOptions[A] {
+    def followSymlinks: Boolean
 
-    case object Ignore extends SymlinkBehavior {
-      override def toLinkOptions = Seq(LinkOption.NOFOLLOW_LINKS)
+    def toOptions: Seq[A] = LinkOption.NOFOLLOW_LINKS.where(!followSymlinks).toSeq
+  }
+
+  type SymlinkOptions = SymlinkOption[LinkOption]
+
+  object SymlinkOptions {
+
+    case object Ignore extends SymlinkOptions {
+      override def followSymlinks = false
     }
 
-    case object Follow extends SymlinkBehavior {
-      override def toLinkOptions = Seq()
+    case object Follow extends SymlinkOptions {
+      override def followSymlinks = true
+    }
+
+  }
+
+  case class CopyOptions(atomicMove: Boolean = false,
+                         copyAttributes: Boolean = false,
+                         replaceExisting: Boolean = false,
+                         followSymlinks: Boolean = true) extends SymlinkOption[CopyOption] {
+    override def toOptions = super.toOptions ++ Seq(
+      StandardCopyOption.ATOMIC_MOVE.where(atomicMove),
+      StandardCopyOption.COPY_ATTRIBUTES.where(copyAttributes),
+      StandardCopyOption.REPLACE_EXISTING.where(replaceExisting)
+    ).flatten
+  }
+
+  sealed trait OpenOptions extends SymlinkOption[OpenOption]
+
+  case class ReadOptions(followSymlinks: Boolean = false) extends OpenOptions
+
+  case class WriteOptions(overwrite: Boolean = true,
+                          createMode: WriteOptions.CreateMode = WriteOptions.CreateIfMissing,
+                          synchronizationMode: WriteOptions.SynchronizationMode = WriteOptions.Asynchronous,
+                          followSymlinks: Boolean = true) extends OpenOptions {
+    override def toOptions = Seq(
+      super.toOptions,
+      createMode.toOptions,
+      synchronizationMode.toOptions
+    ).flatten ++ Seq(
+      StandardOpenOption.APPEND.where(!overwrite),
+      StandardOpenOption.TRUNCATE_EXISTING.where(overwrite)
+    ).flatten
+  }
+
+  object WriteOptions {
+
+    import StandardOpenOption._
+
+    sealed trait SynchronizationMode extends ToOptions[OpenOption]
+
+    case object Asynchronous extends SynchronizationMode {
+      override def toOptions = Seq()
+    }
+
+    case object Synchronous extends SynchronizationMode {
+      override def toOptions = Seq(SYNC)
+    }
+
+    case object SynchronousContent extends SynchronizationMode {
+      override def toOptions = Seq(DSYNC)
+    }
+
+    sealed trait CreateMode extends ToOptions[OpenOption]
+
+    case object CreateIfMissing extends CreateMode {
+      override def toOptions = Seq(CREATE)
+    }
+
+    case object CreateOrFail extends CreateMode {
+      override def toOptions = Seq(CREATE_NEW)
+    }
+
+    case object NeverCreate extends CreateMode {
+      override def toOptions = Seq()
     }
 
   }
